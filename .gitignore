@@ -1,0 +1,16 @@
+# ── BMad installed skill sets (regenerable from _bmad/, ~34MB) ──
+.claude/
+.agents/
+
+# ── macOS ───────────────────────────────────────────────
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon?
+
+# ── Editor / IDE ────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
