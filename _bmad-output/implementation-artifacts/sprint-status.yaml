@@ -1,0 +1,132 @@
+# generated: 2026-08-25
+# last_updated: 2026-08-25
+# project: zabota_mentor
+# project_key: NOKEY
+# tracking_system: file-system
+# story_location: {project-root}/_bmad-output/implementation-artifacts
+
+# STATUS DEFINITIONS:
+# ==================
+# Epic Status:
+#   - backlog: Epic not yet started
+#   - in-progress: Epic actively being worked on
+#   - done: All stories in epic completed
+#
+# Epic Status Transitions:
+#   - backlog → in-progress: Automatically when first story is created (via create-story)
+#   - in-progress → done: Manually when all stories reach 'done' status
+#
+# Story Status:
+#   - backlog: Story only exists in epic file
+#   - ready-for-dev: Story file created in stories folder
+#   - in-progress: Developer actively working on implementation
+#   - review: Ready for code review (via Dev's code-review workflow)
+#   - done: Story completed
+#
+# Retrospective Status:
+#   - optional: Can be completed but not required
+#   - done: Retrospective has been completed
+#
+# Action Item Status:
+#   - open: Committed during a retrospective, not yet addressed
+#   - in-progress: Actively being worked on
+#   - done: Completed
+#
+# WORKFLOW NOTES:
+# ===============
+# - Epic transitions to 'in-progress' automatically when first story is created
+# - Stories can be worked in parallel if team capacity allows
+# - Developer typically creates next story after previous one is 'done' to incorporate learnings
+# - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
+# - Retrospective appends its action items to action_items; sprint-status surfaces open ones
+
+generated: 2026-08-25
+last_updated: 2026-08-25
+project: zabota_mentor
+project_key: NOKEY
+tracking_system: file-system
+story_location: "{project-root}/_bmad-output/implementation-artifacts"
+
+development_status:
+  # Epic 1: Onboarding, Consent & Foundation (M0)
+  epic-1: backlog
+  1-1a-repo-scaffold-ports-module-boundaries: backlog
+  1-1b-versioned-config-store-audit-log: backlog
+  1-1c-ci-pipeline-docker-compose-dev-environment: backlog
+  1-2-telegram-bot-wiring-start-command: backlog
+  1-3-4-consent-capture-at-onboarding: backlog
+  1-4-primary-profiling-dialogue: backlog
+  1-5-master-profile-state-dynamic-profiling: backlog
+  1-6-communication-contract-caps-quiet-hours: backlog
+  1-7-template-messages-shift-start-minimal-shift-totals: backlog
+  1-8-communication-floor-pause-opt-out: backlog
+  1-9-cold-start-incomplete-profiling-handling: backlog
+  1-10-fixture-crm-contract-tests: backlog
+  epic-1-retrospective: optional
+
+  # Epic 2: CRM Integration & Agent Calculation DB (M1)
+  epic-2: backlog
+  2-1-crm-sync-webhook-ingest: backlog
+  2-2-crm-sync-rest-polling-nightly-reconcile: backlog
+  2-3-agent-calculation-db-schema: backlog
+  2-4-freshness-tiers-two-clock-degradation-ladder: backlog
+  2-5-cold-start-priors-for-crm-entities: backlog
+  2-6-crm-results-signal-stream-for-dynamic-profiling: backlog
+  epic-2-retrospective: optional
+
+  # Epic 3: Deterministic Calculation Engine & Plan Tracking (M2)
+  epic-3: backlog
+  3-0-owner-agent-settings-configuration-surface: backlog
+  3-1-read-zabot-plans-2-types: backlog
+  3-2-progress-tracking-sliding-2-week-window: backlog
+  3-3-adaptive-bar-calculation-corridor-rules: backlog
+  3-4a-metric-dynamics-plan-progress-computation: backlog
+  3-4b-decomposition-attainment-forecast: backlog
+  3-4c-renderfacts-binding-contract: backlog
+  3-5-income-transparency-master-questions: backlog
+  3-6-ruble-calculation-gate: backlog
+  3-7-plan-change-handling: backlog
+  epic-3-retrospective: optional
+
+  # Epic 4: Personalized Coaching & Recommendations (M2)
+  epic-4: backlog
+  4-1-recommendation-engine-candidates-filters-ranking: backlog
+  4-2-zero-survey-feedback-loop-outcome-reconciliation: backlog
+  4-3-pre-visit-recommendations-t-30-60-salon-tz: backlog
+  4-4-shift-start-message-micro-support: backlog
+  4-5-shift-totals-with-deterministic-forecast: backlog
+  4-6-grow-session-at-period-end: backlog
+  4-7-forcing-pace-reset-grow-consent-gate: backlog
+  4-8-barrier-work-mi-style-diagnostics: backlog
+  4-9-proactive-triggers-dispatcher-arbitration: backlog
+  epic-4-retrospective: optional
+
+  # Epic 5: Emotional Monitoring & Traffic Light (M2)
+  epic-5: backlog
+  5-1-mood-screenings-who-5-check-ins: backlog
+  5-2-tone-analysis-llm-classifier: backlog
+  5-3-traffic-light-composite-score-hysteresis: backlog
+  5-4-status-behavior-green-yellow-red: backlog
+  5-5-screening-signal-stream-for-dynamic-profiling: backlog
+  epic-5-retrospective: optional
+
+  # Epic 6: LLM Narration, Depersonalization & Output Validation (M2)
+  epic-6: backlog
+  6-1-llm-port-prompt-library: backlog
+  6-2-depersonalization-strip-placeholder-name-egress: backlog
+  6-3-output-validator-figure-check-placeholder-check: backlog
+  6-4-template-fallback-on-llm-outage-budget-trip: backlog
+  6-5-golden-tests-promptfoo: backlog
+  6-6-memory-personalization: backlog
+  epic-6-retrospective: optional
+
+  # Epic 7: Owner Reporting & Pilot Readiness (M3)
+  epic-7: backlog
+  7-1-owner-period-report: backlog
+  7-2-red-status-escalation: backlog
+  7-3-confidentiality-aggregation-boundary: backlog
+  7-4-erasure-propagation-cross-module-owner: backlog
+  7-5a-degradation-dr-drills: backlog
+  7-5b-config-seed-deliverables: backlog
+  7-5c-roskomnadzor-file-pilot-gate: backlog
+  epic-7-retrospective: optional
