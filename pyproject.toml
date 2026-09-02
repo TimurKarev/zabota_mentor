@@ -1,0 +1,109 @@
+[project]
+name = "zabota-mentor"
+version = "0.1.0"
+description = "Telegram-based coaching assistant for beauty-industry masters (hexagonal modular monolith)."
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    # Runtime dependencies — exact pins per architecture stack (M0 pinning, Story 1.1a).
+    "fastapi==0.141.1",
+    "uvicorn==0.52.4",
+    "aiogram==3.31.0",
+    # Pydantic is the single schema-layer definition from transport to storage
+    # (architecture "Consistency Conventions") — allowed inside src/domain.
+    "pydantic==2.13.5",
+    # Target service versions (declared now, connected in later stories — no install here):
+    #   PostgreSQL 17 (managed Yandex Cloud) — schema/connections arrive with Story 1.1b / Epic 2
+    #   Redis 8.x (dedup/pacing only, never durable state — AD-4) — used from Story 1.6 onward
+]
+
+[dependency-groups]
+dev = [
+    "ruff==0.16.5",
+    "mypy==2.3.1",
+    "pytest==9.1.1",
+    "pytest-asyncio==1.4.0",
+    "import-linter==2.14",
+    # httpx backs fastapi.testclient.TestClient
+    "httpx==0.28.1",
+]
+
+[tool.uv]
+# The project runs from the repo root as `src.*` packages (e.g. `python -m src.app`);
+# it is a virtual project for uv — dependencies are installed, the project itself is not.
+package = false
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+extend-exclude = [
+    # BMad planning tooling — not project code (story scope: src/, tests/ only)
+    "_bmad",
+    "_bmad-output",
+    "docs",
+    "design-artifacts",
+]
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # import sorting
+    "UP",  # pyupgrade
+    "B",   # bugbear
+    "SIM", # simplify
+]
+
+[tool.mypy]
+python_version = "3.12"
+mypy_path = "."
+explicit_package_bases = true
+no_implicit_optional = true
+check_untyped_defs = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+
+[[tool.mypy.overrides]]
+# The domain layer is pure and fully typed (AD-2).
+module = ["src.domain", "src.domain.*"]
+disallow_untyped_defs = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+asyncio_mode = "auto"
+
+[tool.importlinter]
+root_packages = ["src"]
+include_external_packages = true
+
+[[tool.importlinter.contracts]]
+# AD-2: all externals behind ports — the domain layer must stay pure.
+# Pydantic is deliberately ALLOWED (schema-layer convention, not a framework).
+name = "Domain is pure: no framework/adapter imports from src.domain"
+type = "forbidden"
+source_modules = ["src.domain"]
+forbidden_modules = [
+    "src.adapters",
+    "src.app",
+    "src.worker",
+    "fastapi",
+    "uvicorn",
+    "aiogram",
+    "redis",
+    "sqlalchemy",
+    "psycopg",
+    "httpx",
+]
+
+[[tool.importlinter.contracts]]
+# AD-11: module boundaries — domain subpackages are mutually independent;
+# cross-module access is only via each module's published interface.
+name = "Domain module boundaries: profile / engines / messaging are independent"
+type = "independence"
+modules = [
+    "src.domain.profile",
+    "src.domain.engines",
+    "src.domain.messaging",
+]
