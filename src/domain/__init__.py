@@ -6,9 +6,9 @@ import-linter, see ``pyproject.toml``).
 """
 
 from src.domain.ports.clock import Clock
-from src.domain.ports.config_store import ConfigStore
+from src.domain.ports.config_store import ConfigStore, ConfigVersion
 from src.domain.ports.crm import CrmPort
 from src.domain.ports.llm import LlmPort
 from src.domain.ports.telegram import TelegramPort
 
-__all__ = ["Clock", "ConfigStore", "CrmPort", "LlmPort", "TelegramPort"]
+__all__ = ["Clock", "ConfigStore", "ConfigVersion", "CrmPort", "LlmPort", "TelegramPort"]

@@ -53,3 +53,30 @@ uv run lint-imports   # architecture contracts: domain purity + module boundarie
 frameworks/adapters; Pydantic is allowed as the schema-layer convention) and
 AD-11 (`profile`, `engines`, `messaging` are mutually independent). CI wiring
 arrives with Story 1.1c; these commands are the exact commands CI will run.
+
+### DB-backed tests (PostgreSQL 17)
+
+Tests touching Postgres (config store, audit log — Story 1.1b) are gated on
+`TEST_DATABASE_URL`; without it they skip with a visible reason and the unit
+layer stays fully green. To run them against a throwaway Postgres 17:
+
+```bash
+docker run --rm -e POSTGRES_PASSWORD=postgres -p 5432:5432 postgres:17
+TEST_DATABASE_URL="postgres://postgres:postgres@localhost:5432/postgres" uv run pytest
+```
+
+(The compose file with a proper dev DB service arrives with Story 1.1c.)
+
+### Migrations
+
+Plain ordered SQL files in `migrations/` (`NNNN_description.sql`), applied by a
+minimal idempotent runner — no Alembic, no down-migrations. Apply pending
+migrations to the database named in `DATABASE_URL`:
+
+```bash
+DATABASE_URL="postgres://…" uv run python -m src.adapters.db.migrate
+```
+
+Schema ownership is governed: `tests/unit/test_schema_ownership.py` maps each
+Postgres schema to its owning module adapter and fails on cross-module access
+(AD-11).

@@ -46,3 +46,17 @@ def test_clock_now_signature_returns_datetime() -> None:
     """
     annotations = Clock.now.__annotations__
     assert annotations["return"] is datetime
+
+
+def test_config_store_declares_the_full_1_1b_contract() -> None:
+    """Story 1.1b evolved ConfigStore from a skeleton: insert/get/active/activate exist.
+
+    Insert-only by shape — the port deliberately declares no update/delete
+    (AD-6); the database-side guard is proven by the gated DB tests.
+    """
+    for method in ("insert", "get", "active", "activate"):
+        assert hasattr(ConfigStore, method), f"ConfigStore is missing {method!r}"
+    for forbidden in ("update", "delete"):
+        assert not hasattr(ConfigStore, forbidden), (
+            f"ConfigStore must not expose {forbidden!r} (AD-6 insert-only)"
+        )

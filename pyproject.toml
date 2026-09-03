@@ -12,6 +12,9 @@ dependencies = [
     # Pydantic is the single schema-layer definition from transport to storage
     # (architecture "Consistency Conventions") — allowed inside src/domain.
     "pydantic==2.13.5",
+    # Postgres driver — adapter-side only, forbidden in src.domain (AD-2, Story 1.1b).
+    # [binary] bundles libpq so no local pg_config is needed.
+    "psycopg[binary]==3.3.5",
     # Target service versions (declared now, connected in later stories — no install here):
     #   PostgreSQL 17 (managed Yandex Cloud) — schema/connections arrive with Story 1.1b / Epic 2
     #   Redis 8.x (dedup/pacing only, never durable state — AD-4) — used from Story 1.6 onward
