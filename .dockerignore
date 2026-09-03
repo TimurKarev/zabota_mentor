@@ -1,0 +1,16 @@
+# Keep the image lean — build context exclusions (Story 1.1c).
+.git
+.venv
+__pycache__
+.mypy_cache
+.ruff_cache
+.pytest_cache
+.import_linter_cache
+_bmad
+_bmad-output
+docs
+design-artifacts
+.DS_Store
+*.md
+# Secrets must never enter an image (AD-5).
+.env

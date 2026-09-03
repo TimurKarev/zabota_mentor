@@ -30,3 +30,7 @@ htmlcov/
 build/
 dist/
 
+# ── Environment / secrets (AD-5: prod secrets live in Yandex Lockbox) ──
+.env
+.env.local
+

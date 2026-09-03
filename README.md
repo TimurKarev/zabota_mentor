@@ -51,21 +51,20 @@ uv run lint-imports   # architecture contracts: domain purity + module boundarie
 
 `lint-imports` must stay green — it enforces AD-2 (domain imports nothing from
 frameworks/adapters; Pydantic is allowed as the schema-layer convention) and
-AD-11 (`profile`, `engines`, `messaging` are mutually independent). CI wiring
-arrives with Story 1.1c; these commands are the exact commands CI will run.
+AD-11 (`profile`, `engines`, `messaging` are mutually independent). These are
+the exact commands CI runs on every push and pull request (see “CI” below).
 
 ### DB-backed tests (PostgreSQL 17)
 
 Tests touching Postgres (config store, audit log — Story 1.1b) are gated on
 `TEST_DATABASE_URL`; without it they skip with a visible reason and the unit
-layer stays fully green. To run them against a throwaway Postgres 17:
+layer stays fully green. Start the dev environment (below) and run them
+against its Postgres 17 — the URL matches the compose defaults:
 
 ```bash
-docker run --rm -e POSTGRES_PASSWORD=postgres -p 5432:5432 postgres:17
-TEST_DATABASE_URL="postgres://postgres:postgres@localhost:5432/postgres" uv run pytest
+docker compose up -d postgres
+TEST_DATABASE_URL="postgres://zabota:zabota@localhost:5432/zabota" uv run pytest
 ```
-
-(The compose file with a proper dev DB service arrives with Story 1.1c.)
 
 ### Migrations
 
@@ -80,3 +79,36 @@ DATABASE_URL="postgres://…" uv run python -m src.adapters.db.migrate
 Schema ownership is governed: `tests/unit/test_schema_ownership.py` maps each
 Postgres schema to its owning module adapter and fails on cross-module access
 (AD-11).
+## Docker Compose dev environment
+
+`docker-compose.yml` runs the full dev stack: Postgres 17, Redis 8
+(forward-looking — not wired until Story 1.6), the FastAPI `app`, and the
+`worker`. Ports for Postgres/Redis are bound to `127.0.0.1` only; dev
+credentials default to throwaway values (`zabota`/`zabota`) and can be
+overridden via a gitignored `.env` (see `.env.example`).
+
+```bash
+docker compose up -d        # build and start all services
+docker compose ps           # wait until app/postgres/redis report healthy
+curl http://localhost:8000/health   # → {"status":"ok"}
+docker compose down         # stop (named volume survives; -v also drops data)
+```
+
+## CI
+
+`.github/workflows/ci.yml` runs on every push to `main` and on all pull
+requests (self-hosted RU runner). Gates, in order:
+
+1. `uv run ruff check .` — lint
+2. `uv run mypy src` — type check
+3. `uv run lint-imports` — import-linter contracts (AD-2 domain purity, AD-11
+   module boundaries); the schema-ownership check (AD-11) runs as part of
+   `pytest` via `tests/unit/test_schema_ownership.py`
+4. `uv run pytest` — unit + contract + golden (DB-backed tests skip)
+5. `uv run pytest` again with `TEST_DATABASE_URL` set against a `postgres:17`
+   service container — DB-backed contract tests execute, not skip
+6. `python -m src.adapters.db.migrate` against the test DB — runner smoke check
+7. `docker build` — the image must build
+
+Branch protection on `main` requires the CI check to pass before merging, so
+any failure blocks the merge.

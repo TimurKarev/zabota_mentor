@@ -1,0 +1,71 @@
+# CI pipeline (Story 1.1c): lint, type check, architecture contracts, tests
+# (DB-backed included via a Postgres 17 service), migrations, image build.
+#
+# Merges are blocked on any failure via GitHub branch protection on `main`
+# (see README "CI" section — the repo setting itself is not scriptable here).
+# Runner: self-hosted (RU) per architecture; GitLab CE is the noted fallback.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  ci:
+    runs-on: self-hosted
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: zabota_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d zabota_test"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    env:
+      TEST_DATABASE_URL: postgres://postgres:postgres@localhost:5432/zabota_test
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.12.9"
+          enable-cache: true
+
+      - name: Install Python (per requires-python = ">=3.12")
+        run: uv python install
+
+      - name: Install locked dependencies (runtime + dev)
+        run: uv sync --frozen --dev
+
+      - name: Lint (ruff)
+        run: uv run ruff check .
+
+      - name: Type check (mypy)
+        run: uv run mypy src
+
+      - name: Architecture contracts (import-linter: AD-2 domain purity, AD-11 boundaries)
+        run: uv run lint-imports
+
+      - name: Tests without DB (DB-backed tests skip; schema-ownership + import-contract guards run)
+        run: uv run pytest
+
+      - name: Tests with DB (Postgres 17 service — contract tests execute, not skip)
+        run: uv run pytest
+
+      - name: Run migrations against the test DB (runner smoke check)
+        run: uv run python -m src.adapters.db.migrate
+        env:
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/zabota_test
+
+      - name: Build Docker image
+        run: docker build -t zabota-mentor:ci .
