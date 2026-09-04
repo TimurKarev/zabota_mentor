@@ -41,6 +41,11 @@ COPY --from=builder /app/.venv ./.venv
 COPY --from=builder /app/src ./src
 COPY --from=builder /app/migrations ./migrations
 
+# Run unprivileged: a compromised app/worker process must not own the
+# container as root. /app is root-owned and read-only for the runtime user.
+RUN adduser --system --uid 1000 --home /app appuser
+USER appuser
+
 EXPOSE 8000
 
 # App entry; the worker overrides this in docker-compose.yml (`src.worker`).

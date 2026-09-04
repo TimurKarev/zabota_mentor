@@ -17,3 +17,7 @@ Each entry includes a one-line reason for deferral to help future reviews.
 ## Deferred from: dev + user verification of 1-1c-ci-pipeline-docker-compose-dev-environment (2026-09-03)
 
 - Worker ignores SIGTERM (slow compose stop) [src/worker/main.py:21-33, docker-compose.yml] — `asyncio.Event().wait()` only exits on SIGINT (`KeyboardInterrupt`); on `docker compose down` the worker waits out Docker's 10s grace period before SIGKILL (observed: ~10.2s vs <1s for other services). Harmless while the worker idles, and the skeleton is 1.1a code this story must not modify. Add a signal handler (loop.add_signal_handler / signal handlers for SIGTERM) when the worker gains real jobs in Story 1.6+/1.7+ — graceful shutdown matters once there is in-flight work to drain.
+
+## Deferred from: code review of 1-1c-ci-pipeline-docker-compose-dev-environment (2026-09-04)
+
+- No restart policy on app/worker in compose [docker-compose.yml:38-69] — containers stay dead after a crash until manual restart. Deferred as a dev-env design choice: crash-looping a dev container is arguably worse than staying down. Revisit if compose gains prod-like usage.

@@ -1,5 +1,5 @@
 # generated: 2026-08-25
-# last_updated: 2026-09-03
+# last_updated: 2026-09-04
 # project: zabota_mentor
 # project_key: NOKEY
 # tracking_system: file-system
@@ -41,7 +41,7 @@
 # - Retrospective appends its action items to action_items; sprint-status surfaces open ones
 
 generated: 2026-08-25
-last_updated: 2026-09-03
+last_updated: 2026-09-04
 project: zabota_mentor
 project_key: NOKEY
 tracking_system: file-system
@@ -52,8 +52,8 @@ development_status:
   epic-1: in-progress
   1-1a-repo-scaffold-ports-module-boundaries: done
   1-1b-versioned-config-store-audit-log: done
-  1-1c-ci-pipeline-docker-compose-dev-environment: review
-  1-2-telegram-bot-wiring-start-command: backlog
+  1-1c-ci-pipeline-docker-compose-dev-environment: done
+  1-2-telegram-bot-wiring-start-command: ready-for-dev
   1-3-4-consent-capture-at-onboarding: backlog
   1-4-primary-profiling-dialogue: backlog
   1-5-master-profile-state-dynamic-profiling: backlog

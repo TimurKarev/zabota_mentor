@@ -59,11 +59,14 @@ the exact commands CI runs on every push and pull request (see “CI” below).
 Tests touching Postgres (config store, audit log — Story 1.1b) are gated on
 `TEST_DATABASE_URL`; without it they skip with a visible reason and the unit
 layer stays fully green. Start the dev environment (below) and run them
-against its Postgres 17 — the URL matches the compose defaults:
+against its Postgres 17 — against the throwaway `zabota_test` database, not
+the persistent dev one. On a fresh compose volume it is created automatically
+by `scripts/create-test-db.sh`; on an existing volume create it once:
 
 ```bash
 docker compose up -d postgres
-TEST_DATABASE_URL="postgres://zabota:zabota@localhost:5432/zabota" uv run pytest
+docker compose exec postgres createdb -U zabota zabota_test   # once, existing volumes only
+TEST_DATABASE_URL="postgres://zabota:zabota@localhost:5432/zabota_test" uv run pytest
 ```
 
 ### Migrations

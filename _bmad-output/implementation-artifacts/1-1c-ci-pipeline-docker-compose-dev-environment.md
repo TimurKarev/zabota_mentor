@@ -4,7 +4,7 @@ baseline_commit: 854253897ae485a4baa29bfd467038301778fdce
 
 # Story 1.1c: CI Pipeline & Docker Compose Dev Environment
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -80,6 +80,26 @@ so that merges are gated and local development is reproducible.
   - [x] 8.4 Local CI simulation: run all 5 gate commands green (`ruff`, `mypy`, `lint-imports`, `pytest` without DB, `pytest` with DB via compose)
   - [x] 8.5 `docker build -t zabota-mentor:ci .` succeeds
   - [x] 8.6 Confirm `src.app` and `src.worker` still start DB-free when run outside compose (regression from 1.1a/1.1b)
+
+### Review Findings
+
+- [x] [Review][Decision] Branch protection on `main` not verifiable from repo — confirmed by Timurkarev: "require status checks" is already enabled. Dismissed.
+- [x] [Review][Patch] Add fork-PR guard to CI — `pull_request` trigger with `runs-on: self-hosted` would run fork code (and its Dockerfile) on the persistent RU box; guard the job so same-repo PRs only (resolved from decision: repo is/will be public) [.github/workflows/ci.yml:13-17]
+- [x] [Review][Patch] "Tests without DB" step actually runs with DB — `TEST_DATABASE_URL` is set at job level so it leaks into the no-DB pytest step; both pytest steps are identical and the skip path is never exercised in CI (violates Task 5.8/5.9 intent) [.github/workflows/ci.yml:32-33,59-60]
+- [x] [Review][Patch] Self-hosted runner hardcodes host port 5432 for the Postgres service — collides with the dev compose Postgres (README instructs running it) or concurrent CI jobs; second bind fails or tests hit a foreign DB [.github/workflows/ci.yml:25-26]
+- [x] [Review][Patch] CI interpreter unpinned — bare `uv python install` resolves the newest `>=3.12` (3.13/3.14) while the image and mypy pin 3.12; CI can diverge from what ships [.github/workflows/ci.yml:44-45]
+- [x] [Review][Patch] App port published on all interfaces — `"8000:8000"` binds 0.0.0.0, inconsistent with the deliberate 127.0.0.1 posture on Postgres/Redis; exposes dev app to the LAN [docker-compose.yml:51]
+- [x] [Review][Patch] Third-party actions pinned to mutable major tags on a self-hosted runner — `actions/checkout@v5`, `astral-sh/setup-uv@v6`; a retargeted tag runs arbitrary code on the persistent runner. Pin to full commit SHAs [.github/workflows/ci.yml:36,39]
+- [x] [Review][Patch] `TEST_DATABASE_URL` aliases the persistent dev database — compose sets it on the `app` service pointing at the dev DB (dead weight now, footgun if tests ever run in-container), and `.env.example` points it at the dev DB too instead of a throwaway `zabota_test` [docker-compose.yml:49, .env.example:20]
+- [x] [Review][Patch] No `concurrency` group — push + PR double-run the full pipeline; stale runs for superseded commits pile up on the single runner [.github/workflows/ci.yml:10-15]
+- [x] [Review][Patch] BuildKit assumed but not enforced — `RUN --mount=type=cache` requires BuildKit and there is no `# syntax=` directive; a legacy-builder daemon fails gate 7 [.github/workflows/ci.yml:71, Dockerfile:21]
+- [x] [Review][Patch] CI image accumulates on the runner — every run layers another `zabota-mentor:ci` with no prune; disk fills over time [.github/workflows/ci.yml:71]
+- [x] [Review][Patch] No `timeout-minutes` on the job — a hung step holds the self-hosted runner for the 360-min default, blocking queued CI [.github/workflows/ci.yml:15-16]
+- [x] [Review][Patch] Worker builds its own image instead of sharing the app's — both services use bare `build: .` with no shared `image:`; two anonymous images, doubled build time, possible drift (deviates from Task 3.4 "same image as app") [docker-compose.yml:39,61]
+- [x] [Review][Patch] Postgres flavor skew CI vs dev — `postgres:17` (Debian) in CI vs `postgres:17-alpine` in compose; collation/locale behavior can differ between environments [.github/workflows/ci.yml:20, docker-compose.yml:9]
+- [x] [Review][Patch] Container runs as root — no `USER` directive in the runtime stage; any future RCE executes as root inside the container [Dockerfile:32-47]
+- [x] [Review][Patch] `sprint-status.yaml` `last_updated` regressed 2026-09-04 → 2026-09-03 — audit-trail timestamp went backwards in this commit [_bmad-output/implementation-artifacts/sprint-status.yaml:2,44]
+- [x] [Review][Defer] No restart policy on app/worker in compose — deferred, design choice for a dev environment (crash-looping a dev container is arguably worse than staying down); revisit if compose gains prod-like usage [docker-compose.yml:38-69] — deferred, dev-env design choice (2026-09-04)
 
 ## Dev Notes
 
@@ -317,3 +337,15 @@ claude-5-sonnet (Claude Code CLI, glm-5.2)
   .dockerignore, docker-compose.yml (postgres 17 / redis 8 / app / worker),
   .env.example, CI workflow (5 gates + DB tests + migrations + image build),
   .gitignore + README updates. All AC verified end-to-end locally.
+- 2026-09-04: Code review patches (15 applied) — CI: TEST_DATABASE_URL moved
+  from job-level to the with-DB step (skip path now actually exercised),
+  Postgres service host port 15432 (collision-free), Python pinned to 3.12,
+  actions pinned to commit SHAs, fork-PR guard, concurrency group,
+  timeout-minutes, DOCKER_BUILDKIT=1, post-build image prune, step-name YAML
+  bug fixed (pre-existing). Compose: app port 127.0.0.1-only, TEST_DATABASE_URL
+  removed from app service, shared `zabota-mentor:dev` image for app+worker,
+  `scripts/create-test-db.sh` creates throwaway `zabota_test` DB. Dockerfile:
+  non-root `appuser`. .env.example/README: TEST_DATABASE_URL points at
+  `zabota_test`, not the persistent dev DB. sprint-status `last_updated`
+  regression corrected. Local verify: `uv run pytest` → 35 passed, 7 skipped;
+  `docker compose config` OK.

@@ -4,6 +4,10 @@
 # Merges are blocked on any failure via GitHub branch protection on `main`
 # (see README "CI" section — the repo setting itself is not scriptable here).
 # Runner: self-hosted (RU) per architecture; GitLab CE is the noted fallback.
+#
+# Fork guard: the runner is a persistent self-hosted machine, so pull requests
+# from forks (different head repo) are skipped — untrusted code must not run
+# on it. Same-repo branch PRs run normally.
 
 name: CI
 
@@ -12,37 +16,59 @@ on:
     branches: [main]
   pull_request:
 
+# Cancel superseded runs; on a single self-hosted runner they would otherwise
+# queue serially and waste the Docker build each time.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   ci:
     runs-on: self-hosted
+    # Fork-PR guard (see header comment): run only on pushes and same-repo PRs.
+    if: >-
+      github.event_name != 'pull_request' ||
+      github.event.pull_request.head.repo.full_name == github.repository
+    # A hung step (wedged Docker daemon, stuck network) must not hold the
+    # runner for the 360-minute default and block all queued CI.
+    timeout-minutes: 30
     services:
       postgres:
-        image: postgres:17
+        # Matches the dev environment flavor (docker-compose.yml) so CI and
+        # local runs behave identically.
+        image: postgres:17-alpine
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
           POSTGRES_DB: zabota_test
+        # Host port 15432 (not 5432): the runner is a long-lived machine and
+        # 5432 collides with the dev compose Postgres and other CI jobs.
         ports:
-          - 5432:5432
+          - 15432:5432
         options: >-
           --health-cmd "pg_isready -U postgres -d zabota_test"
           --health-interval 5s
           --health-timeout 3s
           --health-retries 10
-    env:
-      TEST_DATABASE_URL: postgres://postgres:postgres@localhost:5432/zabota_test
     steps:
+      # Actions pinned to commit SHAs, not mutable major tags: the runner is
+      # persistent and a retargeted tag would execute arbitrary code on it.
       - name: Check out repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        # v5 tag commit
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6
+        # v6 tag commit
         with:
           version: "0.12.9"
           enable-cache: true
 
-      - name: Install Python (per requires-python = ">=3.12")
-        run: uv python install
+      # Pinned to 3.12 to match the production image and mypy
+      # (python_version = "3.12"); a bare `uv python install` would grab the
+      # newest >=3.12 and let CI diverge from what ships.
+      - name: Install Python 3.12
+        run: uv python install 3.12
 
       - name: Install locked dependencies (runtime + dev)
         run: uv sync --frozen --dev
@@ -53,19 +79,33 @@ jobs:
       - name: Type check (mypy)
         run: uv run mypy src
 
-      - name: Architecture contracts (import-linter: AD-2 domain purity, AD-11 boundaries)
+      - name: "Architecture contracts (import-linter: AD-2 domain purity, AD-11 boundaries)"
         run: uv run lint-imports
 
+      # No TEST_DATABASE_URL here: DB-backed tests must exercise the skip
+      # path (it is set at step level below, never at job level).
       - name: Tests without DB (DB-backed tests skip; schema-ownership + import-contract guards run)
         run: uv run pytest
 
       - name: Tests with DB (Postgres 17 service — contract tests execute, not skip)
         run: uv run pytest
+        env:
+          TEST_DATABASE_URL: postgres://postgres:postgres@localhost:15432/zabota_test
 
       - name: Run migrations against the test DB (runner smoke check)
         run: uv run python -m src.adapters.db.migrate
         env:
-          DATABASE_URL: postgres://postgres:postgres@localhost:5432/zabota_test
+          DATABASE_URL: postgres://postgres:postgres@localhost:15432/zabota_test
 
+      # BuildKit is required by the Dockerfile's `RUN --mount=type=cache`;
+      # enforce it rather than relying on the runner's daemon defaults.
       - name: Build Docker image
         run: docker build -t zabota-mentor:ci .
+        env:
+          DOCKER_BUILDKIT: "1"
+
+      # The runner is persistent: drop the CI image every run or its layers
+      # accumulate until the disk fills.
+      - name: Prune CI image
+        if: always()
+        run: docker image rm zabota-mentor:ci || true
