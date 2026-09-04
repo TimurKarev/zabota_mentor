@@ -97,6 +97,41 @@ curl http://localhost:8000/health   # → {"status":"ok"}
 docker compose down         # stop (named volume survives; -v also drops data)
 ```
 
+## Telegram bot dev setup (Story 1.2)
+
+The bot (`/start` command, salon onboarding entry) runs inside the `app`
+process — no separate service. It needs `BOT_TOKEN` **and** `DATABASE_URL`;
+without a token the app logs a warning and serves `/health` only (CI depends
+on that degradation).
+
+1. **Create a throwaway bot** with [@BotFather](https://t.me/BotFather):
+   `/newbot` → copy the token (shape `1234567890:AAA…`).
+2. **Configure env** — `cp .env.example .env`, then set:
+   - `BOT_TOKEN=…` (your BotFather token)
+   - `BOT_MODE=polling` (default; dev needs no public URL)
+3. **Apply migrations** to the dev DB (creates the `profile`/`messaging`
+   schemas and seeds the `dev-salon` deep-link code):
+   ```bash
+   DATABASE_URL="postgres://zabota:zabota@localhost:5432/zabota" \
+     uv run python -m src.adapters.db.migrate
+   ```
+4. **Run**: `docker compose up -d` (compose passes `BOT_TOKEN` and
+   `BOT_MODE=polling` through) or locally `uv run python -m src.app`.
+5. **Smoke test** in Telegram: open the bot and send `/start salon1`
+   (the seeded dev deep-link payload) → the welcome message names
+   «Dev Salon». Send it again → same welcome, still exactly one row in
+   `profile.master_chat_map` (idempotent by `chat_id`, AD-13). A plain
+   `/start` without a payload → the "use your salon's link" fallback, no rows.
+
+**Webhook mode (prod):** set `BOT_MODE=webhook`, `WEBHOOK_URL=https://…`
+(public base URL) and `TELEGRAM_SECRET_TOKEN` (1–256 chars `A-Za-z0-9_-`,
+e.g. `openssl rand -hex 32`). On startup the app registers
+`<WEBHOOK_URL>/telegram/webhook` with Telegram; incoming requests are
+authenticated by constant-time comparison of `X-Telegram-Bot-Api-Secret-Token`.
+Telegram retries non-200 deliveries — replays are no-ops thanks to the
+durable `update_id` dedup (`messaging.telegram_update_dedup`, AD-12). In
+production the secrets live in Yandex Lockbox (AD-5), never in files.
+
 ## CI
 
 `.github/workflows/ci.yml` runs on every push to `main` and on all pull

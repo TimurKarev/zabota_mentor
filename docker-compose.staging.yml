@@ -1,0 +1,83 @@
+# Staging environment (Story 1.2 deploy): same topology as dev, but for a
+# long-lived server VM. Differences from docker-compose.yml:
+#   - restart: unless-stopped on every service (bot must survive reboots)
+#   - no throwaway credential defaults — POSTGRES_PASSWORD is required (:?err)
+#   - BOT_TOKEN comes from the server-side .env (never committed)
+#   - polling transport: no public URL/TLS/webhook needed (prod will switch to
+#     BOT_MODE=webhook per .env.example)
+#
+# Usage on the VM:
+#   cp .env.example .env   # then set POSTGRES_* and BOT_TOKEN
+#   docker compose -f docker-compose.staging.yml up -d --build
+#   docker compose -f docker-compose.staging.yml run --rm app \
+#     python -m src.adapters.db.migrate
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-zabota_staging}
+      POSTGRES_USER: ${POSTGRES_USER:-zabota}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+    volumes:
+      - postgres_staging_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-zabota} -d ${POSTGRES_DB:-zabota_staging}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+    restart: unless-stopped
+
+  redis:
+    # AD-4 stack parity: dedup/pacing — not wired until Story 1.6.
+    image: redis:8-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+    restart: unless-stopped
+
+  app:
+    build: .
+    image: zabota-mentor:staging
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      APP_HOST: 0.0.0.0
+      APP_PORT: "8000"
+      DATABASE_URL: postgres://${POSTGRES_USER:-zabota}:${POSTGRES_PASSWORD:?}@postgres:5432/${POSTGRES_DB:-zabota_staging}
+      BOT_MODE: polling
+      BOT_TOKEN: ${BOT_TOKEN:?set BOT_TOKEN in .env}
+    ports:
+      # Loopback-only on the VM: no inbound from the internet; reachable for
+      # debugging via SSH tunnel (ssh -L 8000:localhost:8000 ...).
+      - "127.0.0.1:8000:8000"
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health')\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+
+  worker:
+    build: .
+    image: zabota-mentor:staging
+    command: python -m src.worker
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-zabota}:${POSTGRES_PASSWORD:?}@postgres:5432/${POSTGRES_DB:-zabota_staging}
+    restart: unless-stopped
+
+volumes:
+  postgres_staging_data:

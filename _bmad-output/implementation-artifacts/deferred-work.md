@@ -21,3 +21,8 @@ Each entry includes a one-line reason for deferral to help future reviews.
 ## Deferred from: code review of 1-1c-ci-pipeline-docker-compose-dev-environment (2026-09-04)
 
 - No restart policy on app/worker in compose [docker-compose.yml:38-69] — containers stay dead after a crash until manual restart. Deferred as a dev-env design choice: crash-looping a dev container is arguably worse than staying down. Revisit if compose gains prod-like usage.
+
+## Deferred from: code review of 1-2-telegram-bot-wiring-start-command (2026-09-04)
+
+- `messaging.telegram_update_dedup` grows unbounded (insert-only, no retention/eviction), and every incoming update — including traffic that matches no handler — opens a fresh Postgres connection and inserts a dedup row. Pilot-scale tradeoff; revisit retention and connection pooling with Story 1.6 (Redis dedup layer / AD-12 optimization).
+- Dev seed `dev-salon`/`salon1` in `migrations/0002_profile_master_tables.sql` ships to every environment incl. prod. Review decision 2026-09-04: keep for M0; remove before the production pilot (anyone with the public start code can onboard into the fake salon in prod).

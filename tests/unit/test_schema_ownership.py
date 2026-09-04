@@ -21,6 +21,9 @@ SCHEMA_OWNERS = {
     "audit": "src.adapters.audit",
     # Cross-cutting bookkeeping only (schema_migrations + the runner), not a module.
     "public": "src.adapters.db",
+    # Story 1.2: profile identity/mapping/work-context + messaging dedup.
+    "profile": "src.adapters.profile_store",
+    "messaging": "src.adapters.messaging_store",
 }
 
 # Keyword-anchored object references. `CREATE/DROP INDEX` and `CREATE/DROP

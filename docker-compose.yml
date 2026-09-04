@@ -52,6 +52,10 @@ services:
       APP_HOST: 0.0.0.0
       APP_PORT: "8000"
       DATABASE_URL: postgres://${POSTGRES_USER:-zabota}:${POSTGRES_PASSWORD:-zabota}@postgres:5432/${POSTGRES_DB:-zabota}
+      # Telegram bot (Story 1.2): dev runs polling; an empty token keeps the
+      # app healthy with no bot (see .env.example for the full setup).
+      BOT_MODE: polling
+      BOT_TOKEN: ${BOT_TOKEN:-}
     ports:
       # Loopback-only, matching the Postgres/Redis posture above.
       - "127.0.0.1:8000:8000"
