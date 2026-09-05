@@ -4,7 +4,7 @@ baseline_commit: 4b14a18
 
 # Story 1.2: Telegram Bot Wiring & /start Command
 
-Status: in-progress
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 

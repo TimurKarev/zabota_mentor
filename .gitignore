@@ -34,3 +34,6 @@ dist/
 .env
 .env.local
 
+
+# WARP tunnel secret (registered off-box; PrivateKey — lives only on the VM)
+warp/

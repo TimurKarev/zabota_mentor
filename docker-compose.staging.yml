@@ -40,6 +40,26 @@ services:
       start_period: 5s
     restart: unless-stopped
 
+  warp:
+    # SOCKS5 egress via Cloudflare WARP: RU-hosted networks block
+    # api.telegram.org, so Bot API traffic is routed through this tunnel
+    # (TG_PROXY_URL=socks5://warp:1080). wireproxy is userspace WireGuard —
+    # no NET_ADMIN needed; no official docker image exists, so the static
+    # release binary lives on the VM in ./warp/wireproxy (downloaded per
+    # docs/ops-staging.md). The WARP profile is registered off-box (RU networks
+    # DNS-poison api.cloudflareclient.com) in ./warp/wireproxy.conf
+    # (chmod 600, never committed — contains PrivateKey).
+    # Swap transports (own VPS, VLESS) by changing TG_PROXY_URL only.
+    image: alpine:3.21
+    command: ["/opt/wireproxy", "-c", "/etc/wireguard/wireproxy.conf"]
+    volumes:
+      - ./warp/wireproxy.conf:/etc/wireguard/wireproxy.conf:ro
+      - ./warp/wireproxy:/opt/wireproxy:ro
+    ports:
+      # Loopback-only: for host-side egress tests (curl --socks5-hostname).
+      - "127.0.0.1:1080:1080"
+    restart: unless-stopped
+
   app:
     build: .
     image: zabota-mentor:staging
@@ -48,12 +68,17 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      warp:
+        # wireproxy ships no healthcheck; readiness is verified by the app's
+        # polling logs (and by the egress curl in docs/ops-staging.md).
+        condition: service_started
     environment:
       APP_HOST: 0.0.0.0
       APP_PORT: "8000"
       DATABASE_URL: postgres://${POSTGRES_USER:-zabota}:${POSTGRES_PASSWORD:?}@postgres:5432/${POSTGRES_DB:-zabota_staging}
       BOT_MODE: polling
       BOT_TOKEN: ${BOT_TOKEN:?set BOT_TOKEN in .env}
+      TG_PROXY_URL: ${TG_PROXY_URL:-socks5://warp:1080}
     ports:
       # Loopback-only on the VM: no inbound from the internet; reachable for
       # debugging via SSH tunnel (ssh -L 8000:localhost:8000 ...).

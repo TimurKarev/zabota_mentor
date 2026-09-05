@@ -65,7 +65,10 @@ def _build_lifespan(
             yield
             return
 
-        bot = build_bot(token)
+        proxy = os.getenv("TG_PROXY_URL") or None
+        if proxy:
+            logger.info("Telegram traffic routed via proxy: %s", proxy)
+        bot = build_bot(token, proxy=proxy)
         deps = telegram_bot_dependencies(database_url, bot)
         dispatcher = build_dispatcher(deps)
         app.state.bot = bot

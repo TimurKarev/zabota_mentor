@@ -15,6 +15,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from aiogram import BaseMiddleware, Bot, Dispatcher, F, Router
+from aiogram.client.session.aiohttp import AiohttpSession
 from aiogram.filters import CommandObject, CommandStart
 from aiogram.types import Message, TelegramObject, Update
 
@@ -98,9 +99,16 @@ def create_start_router(deps: BotDependencies) -> Router:
     return router
 
 
-def build_bot(token: str) -> Bot:
-    """Build the aiogram Bot. Plain text only — no parse_mode (deterministic templates)."""
-    return Bot(token=token)
+def build_bot(token: str, proxy: str | None = None) -> Bot:
+    """Build the aiogram Bot. Plain text only — no parse_mode (deterministic templates).
+
+    ``proxy`` (``TG_PROXY_URL``, e.g. ``socks5://warp:1080``) routes Bot API
+    traffic through a proxy — required on RU-hosted environments where
+    ``api.telegram.org`` is network-blocked. SOCKS needs the ``aiohttp-socks``
+    dependency; plain HTTP(S) proxies work without it.
+    """
+    session = AiohttpSession(proxy=proxy) if proxy else None
+    return Bot(token=token, session=session)
 
 
 def build_dispatcher(deps: BotDependencies) -> Dispatcher:

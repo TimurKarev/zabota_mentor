@@ -5,8 +5,8 @@ Hexagonal modular monolith: one deployable, six modules (`crm_sync`, `profile`,
 `engines`, `messaging`, `llm`, `config`) plus an append-only `audit` trail.
 
 - **Python:** 3.12+
-- **Runtime (pinned in `pyproject.toml`):** FastAPI 0.141.1, uvicorn 0.52.4, aiogram 3.31.0, Pydantic 2.13.5
-- **Target services (connected in later stories):** PostgreSQL 17, Redis 8.x
+- **Runtime (pinned in `pyproject.toml`):** FastAPI 0.141.1, uvicorn 0.52.4, aiogram 3.31.0, Pydantic 2.13.5, psycopg 3.3.5
+- **Services:** PostgreSQL 17 (connected: config store, profile/messaging stores); Redis 8 (dedup/pacing — not wired until Story 1.6)
 
 ## Source tree
 
@@ -17,7 +17,8 @@ src/
     engines/         # deterministic calculation engine, plan tracking
     messaging/       # communication contract, templates, dispatcher rules
     ports/           # CrmPort, LlmPort, TelegramPort, Clock, ConfigStore Protocols
-  adapters/          # port implementations: crm_adapter, llm, telegram, clock, config_store
+  adapters/          # port implementations: telegram, config_store, clock, crm_adapter, llm,
+                     # db (migrate), profile_store, messaging_store, audit
   app/               # FastAPI wiring, DI, webhook endpoints
   worker/            # scheduler, outbox dispatcher, sync jobs
 tests/
@@ -150,3 +151,29 @@ requests (self-hosted RU runner). Gates, in order:
 
 Branch protection on `main` requires the CI check to pass before merging, so
 any failure blocks the merge.
+
+### Branching
+
+Trunk-based: one branch per story, merged back to `main` via PR (CI + review
+gates it), and only `main` is deployed. No long-lived `dev` branch.
+
+```bash
+git checkout -b story/1-3-consent-capture-at-onboarding   # from main
+# …commit work…
+git push -u origin story/1-3-consent-capture-at-onboarding
+gh pr create                                              # CI runs on the PR
+# review fixes go into the same branch; merge after approval
+```
+
+## Staging
+
+A staging VM runs the bot via `docker compose -f docker-compose.staging.yml`
+(polling transport). Deploy after merging to `main`:
+
+```bash
+./scripts/deploy-staging.sh
+```
+
+VM address, credentials policy, incident log, and the current project status
+anchor live in [docs/ops-staging.md](docs/ops-staging.md) — read that first
+when picking up ops work.

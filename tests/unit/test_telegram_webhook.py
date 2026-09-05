@@ -12,9 +12,10 @@ from uuid import UUID
 
 import pytest
 from aiogram import Bot
+from aiogram.client.session.aiohttp import AiohttpSession
 from fastapi.testclient import TestClient
 
-from src.adapters.telegram import BotDependencies, build_dispatcher
+from src.adapters.telegram import BotDependencies, build_bot, build_dispatcher
 from src.app.main import create_app
 from src.domain.ports.telegram import TelegramPort
 
@@ -224,3 +225,18 @@ def test_handler_failure_sends_no_reply(harness: Harness) -> None:
         _post(client, _make_update(21, "/start salon1"))
     assert port.sent == []
     assert repository._update_ids == {21}
+
+
+class TestBuildBotProxy:
+    """TG_PROXY_URL wiring (RU-hosted environments route Bot API via proxy)."""
+
+    def test_proxyless_bot_uses_default_session(self) -> None:
+        bot = build_bot(FAKE_BOT_TOKEN)
+        assert isinstance(bot.session, AiohttpSession)
+        assert bot.session.proxy is None
+
+    def test_proxy_url_lands_in_session(self) -> None:
+        proxy = "socks5://warp:1080"
+        bot = build_bot(FAKE_BOT_TOKEN, proxy=proxy)
+        assert isinstance(bot.session, AiohttpSession)
+        assert bot.session.proxy == proxy

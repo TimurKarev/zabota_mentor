@@ -52,8 +52,10 @@ def test_domain_forbidden_list_covers_all_runtime_dependencies() -> None:
     # Pydantic is deliberately allowed in the domain (schema-layer convention, see AD-2 comment).
     allowed_in_domain = {"pydantic"}
     for dependency in dependencies:
-        # Strip the pin and any PEP 508 extras: "psycopg[binary]==3.3.5" -> "psycopg".
-        name = dependency.split("==")[0].split("[")[0]
+        # Strip the pin and any PEP 508 extras, normalize the distribution
+        # name to its module name: "psycopg[binary]==3.3.5" -> "psycopg",
+        # "aiohttp-socks==0.12.0" -> "aiohttp_socks".
+        name = dependency.split("==")[0].split("[")[0].replace("-", "_")
         if name not in allowed_in_domain:
             assert name in forbidden, (
                 f"Runtime dependency {name!r} is missing from the domain-purity forbidden "
